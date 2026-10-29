@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Funil Comercial PG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: faixa azul-marinho com resumo e SLA; barra de filtros sobreposta; faixa única de indicadores;
+     funil com conectores de conversão; análises em duas colunas; tabelas de detalhe em largura total. */
+  :root {
+    --bg: #F3F6FA; --panel: #FFFFFF; --ink: #13233A; --muted: #607086; --faint: #8A97A8; --line: #E1E7EF; --line-2: #EEF2F7;
+    --navy: #0B2545; --navy-2: #13315C; --accent: #1F5FAE; --accent-2: #8DB6E6; --flow: #E4EDF8;
+    --wait: #C9D3DF; --out: #4A5A70; --warn: #B7791F; --bad: #C0392B; --ok: #1F5FAE;
+    --display: "Manrope", "Segoe UI", system-ui, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --r: 12px;
+    --shadow: 0 1px 2px rgb(16 36 64 / .05), 0 4px 16px rgb(16 36 64 / .06);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
+  .inner { max-width: 1240px; margin-inline: auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+
+  /* faixa superior */
+  .hero { background-color: var(--navy); background-image: linear-gradient(rgb(255 255 255 / .035) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .035) 1px, transparent 1px); background-size: 32px 32px; color: #fff; padding-block: 22px 72px; }
+  .hero-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 28px; border-bottom: 1px solid rgb(255 255 255 / .1); }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: .02em; }
+  .mark { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(180deg, #fff 0 33%, var(--accent-2) 33% 66%, var(--accent) 66%); clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%); }
+  .sync { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; color: rgb(255 255 255 / .72); flex-wrap: wrap; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #6FCF97; box-shadow: 0 0 0 3px rgb(111 207 151 / .2); }
+  .dot.err { background: #F28B82; box-shadow: 0 0 0 3px rgb(242 139 130 / .2); }
+  .btn-ghost { font: inherit; font-size: 12px; font-weight: 500; color: #fff; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .2); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .btn-ghost:hover { background: rgb(255 255 255 / .16); }
+  .hero-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(min(100%, 300px), 340px); gap: 32px; align-items: end; padding-top: 32px; }
+  @media (max-width: 820px) { .hero-main { grid-template-columns: 1fr; } }
+  .kicker { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-2); }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 4.6vw, 46px); line-height: 1.05; letter-spacing: -.02em; margin: 10px 0 14px; }
+  .lede { margin: 0; font-size: 17px; line-height: 1.55; color: rgb(255 255 255 / .74); max-width: 58ch; text-wrap: pretty; }
+  .lede b { color: #fff; font-weight: 600; }
+  .sla-card { background: var(--panel); color: var(--ink); border-radius: var(--r); padding: 20px 22px; box-shadow: 0 12px 32px rgb(0 0 0 / .22); display: flex; flex-direction: column; gap: 10px; }
+  .sla-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .sla-big { font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--navy); }
+  .sla-big small { font-family: var(--body); font-size: 14px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+  .track { position: relative; height: 8px; border-radius: 999px; background: var(--line-2); overflow: hidden; }
+  .fill { height: 100%; width: 0; border-radius: 999px; background: var(--accent); transition: width .7s cubic-bezier(.2,.7,.2,1); }
+  .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .sla-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+
+  /* conteúdo */
+  main.inner { margin-top: -44px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .toolbar { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+  .toolbar label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); min-width: 0; }
+  select, input[type=search] { font: inherit; font-size: 14px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; min-width: 170px; max-width: 100%; }
+  select:hover, input[type=search]:hover { border-color: var(--accent-2); }
+  .btn { font: inherit; font-size: 13px; font-weight: 500; color: var(--accent); background: none; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; cursor: pointer; margin-left: auto; }
+  .btn:hover { background: var(--flow); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .kpis { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .kpi { padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; border-left: 1px solid var(--line-2); min-width: 0; }
+  .kpi:first-child { border-left: 0; }
+  .kpi .lab { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .kpi .v { font-family: var(--display); font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -.02em; color: var(--navy); font-variant-numeric: tabular-nums; }
+  .kpi .sub { font-size: 12px; color: var(--muted); }
+  .kpi.lead .v { color: var(--accent); }
+  @media (max-width: 980px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kpi:nth-child(4) { border-left: 0; } .kpi:nth-child(n+4) { border-top: 1px solid var(--line-2); } }
+  @media (max-width: 520px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kpi { border-left: 0; border-top: 1px solid var(--line-2); } .kpi:nth-child(even) { border-left: 1px solid var(--line-2); } .kpi:nth-child(-n+2) { border-top: 0; } }
+
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .card-h { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); }
+  .card h2 { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: -.01em; margin: 2px 0 0; color: var(--navy); }
+  .note { margin: 0; font-size: 13px; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* funil */
+  .funnel { position: relative; display: flex; flex-direction: column; }
+  .frow, .fconn { display: grid; grid-template-columns: 160px minmax(0, 1fr) 290px; gap: 24px; align-items: center; }
+  .fname { display: flex; flex-direction: column; }
+  .fname small { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .fname span { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--navy); }
+  .farea { display: flex; justify-content: center; min-width: 0; }
+  .fbar { display: flex; gap: 2px; height: 48px; border-radius: 6px; overflow: hidden; min-width: 6px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
+  .seg { height: 100%; transition: filter .15s; }
+  .seg:hover { filter: brightness(1.1); }
+  .fstat { display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+  .fstat .big { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--navy); line-height: 1.1; }
+  .fstat .big small { font-family: var(--body); font-weight: 400; font-size: 12px; color: var(--muted); }
+  .fstat .parts { font-size: 12px; color: var(--muted); }
+  .fconn .flow { height: 30px; background: var(--flow); }
+  .chip { justify-self: start; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); background: var(--flow); border-radius: 999px; padding: 2px 10px; font-variant-numeric: tabular-nums; }
+  .chip.low { color: var(--out); background: var(--line-2); }
+  @media (max-width: 720px) {
+    .frow { grid-template-columns: 1fr; gap: 6px; padding-block: 6px; }
+    .fconn { grid-template-columns: 1fr; gap: 0; } .fconn .flow, .fconn > span:first-child { display: none; }
+    .farea { justify-content: flex-start; }
+  }
+  .proximas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding-top: 12px; border-top: 1px dashed var(--line); }
+  .ghost { border: 1px dashed var(--wait); border-radius: 999px; padding: 2px 10px; color: var(--faint); }
+  .tip { position: absolute; pointer-events: none; background: var(--navy); color: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgb(11 37 69 / .3); padding: 8px 12px; font-size: 12px; white-space: nowrap; z-index: 3; }
+  .tip .h { color: var(--accent-2); font-weight: 600; }
+
+  /* barras horizontais */
+  .hbars { display: flex; flex-direction: column; gap: 14px; }
+  .hrow { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .hhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .hname { font-size: 13px; font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+  .hval { font-size: 12px; color: var(--muted); text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .hval b { font-family: var(--display); font-size: 14px; color: var(--navy); }
+  .hwrap { width: 100%; height: 8px; border-radius: 999px; background: var(--line-2); overflow: hidden; }
+  .hbar { height: 100%; border-radius: 999px; min-width: 4px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
+  .hint { margin: 0; font-size: 12px; color: var(--muted); padding: 10px 12px; background: var(--bg); border-radius: 8px; }
+
+  /* tabelas */
+  .tbox { overflow: auto; max-height: 480px; margin-inline: -8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 11px 12px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+  tbody tr:hover td { background: #F7F9FC; }
+  td:first-child { font-weight: 500; color: var(--navy); }
+  .num { text-align: right; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t-ok { color: var(--accent); background: var(--flow); }
+  .t-out { color: var(--out); background: var(--line-2); }
+  .t-bad { color: var(--bad); background: #FBEAE8; }
+  .t-warn { color: var(--warn); background: #FBF2E2; }
+  .t-muted { color: var(--muted); background: var(--line-2); }
+  .tablehead { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .alert { border-left: 4px solid var(--bad); }
+  footer { color: var(--faint); font-size: 12px; padding-block: 0 32px; }
+  @media (prefers-reduced-motion: reduce) { .fbar, .fill, .hbar { transition: none; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="inner">
+    <div class="hero-top">
+      <span class="brand"><i class="mark"></i>Recrutamento · Comercial PG</span>
+      <span class="sync"><i class="dot" id="dot"></i><span id="status">Carregando dados da planilha…</span><button class="btn-ghost" id="refresh" type="button">Atualizar</button></span>
+    </div>
+    <div class="hero-main">
+      <div>
+        <span class="kicker">Painel do processo seletivo</span>
+        <h1>Funil Comercial PG</h1>
+        <p class="lede" id="lede">Carregando…</p>
+      </div>
+      <aside class="sla-card" id="sla-card">
+        <div class="sla-top"><span class="eyebrow">SLA da vaga</span><span id="sla-pill"></span></div>
+        <div id="sla-com">
+          <div class="sla-big">Dia <span id="sla-dia">—</span> <small>de <span id="sla-prazo2">45</span></small></div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">
+            <div class="track"><div class="fill" id="sla-fill"></div></div>
+            <div class="ticks"><span>Abertura</span><span>Atenção · <span id="sla-at">36</span>d</span><span>Prazo · <span id="sla-prazo">45</span>d</span></div>
+          </div>
+          <div class="sla-foot" style="margin-top:12px"><span id="sla-rest"></span><span id="sla-vaga"></span></div>
+        </div>
+        <div id="sla-sem" hidden>
+          <div class="sla-big">Sem data</div>
+          <p class="note" style="margin-top:8px">Preencha a data de abertura na aba Vagas da planilha para acompanhar o prazo.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</header>
+
+<main class="inner">
+  <section class="card alert" id="erro" hidden>
+    <h2>Não consegui ler a planilha</h2>
+    <p class="note" id="erro-msg"></p>
+    <p class="note">Confira se a planilha está compartilhada como "Qualquer pessoa com o link pode ver" e se as abas se chamam <b>Candidatos</b> e <b>Vagas</b>.</p>
+  </section>
+
+  <div class="toolbar">
+    <label for="f-cidade">Cidade<select id="f-cidade"></select></label>
+    <label for="f-vaga">Vaga<select id="f-vaga"></select></label>
+    <label for="f-sla">SLA da vaga<select id="f-sla">
+      <option value="">Todos os status</option><option>No prazo</option><option value="Atenção">Atenção (80% do prazo)</option><option>Atrasada</option><option>Sem data</option>
+    </select></label>
+    <label for="f-origem">Origem<select id="f-origem"></select></label>
+    <button class="btn" id="limpar" type="button">Limpar filtros</button>
+  </div>
+
+  <section class="kpis" id="tiles" aria-label="Indicadores">
+    <div class="kpi lead"><span class="lab">Candidatos</span><span class="v" data-k="total">—</span><span class="sub">no processo</span></div>
+    <div class="kpi"><span class="lab">Em andamento</span><span class="v" data-k="andamento">—</span><span class="sub">aguardando ou pendentes</span></div>
+    <div class="kpi"><span class="lab">Saíram</span><span class="v" data-k="sairam">—</span><span class="sub">reprovados, desistentes, ausentes</span></div>
+    <div class="kpi"><span class="lab">Passaram no RH</span><span class="v" data-k="rh">—</span><span class="sub">aprovados na entrevista RH</span></div>
+    <div class="kpi"><span class="lab">Propostas</span><span class="v" data-k="propostas">—</span><span class="sub">enviadas</span></div>
+    <div class="kpi"><span class="lab">Contratados</span><span class="v" data-k="contratados">—</span><span class="sub">vagas fechadas</span></div>
+  </section>
+
+  <section class="card" id="funil">
+    <div class="card-h">
+      <div><span class="eyebrow">Conversão</span><h2>Funil por etapa</h2></div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--accent)"></i>Avançou</span>
+        <span><i class="sw" style="background:var(--wait)"></i>Em andamento</span>
+        <span><i class="sw" style="background:var(--out)"></i>Saiu</span>
+      </div>
+    </div>
+    <div class="funnel" id="funnel"></div>
+    <div class="proximas" id="proximas"></div>
+  </section>
+
+  <div class="grid">
+    <section class="card" id="saidas">
+      <div class="card-h">
+        <div><span class="eyebrow">Perdas</span><h2>Por que e onde saíram</h2></div>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--accent-2)"></i>Desistência</span>
+          <span><i class="sw" style="background:var(--out)"></i>Reprovação</span>
+          <span><i class="sw" style="background:var(--wait)"></i>Ausência / recusa</span>
+        </div>
+      </div>
+      <div class="hbars" id="saidas-bars"></div>
+    </section>
+
+    <section class="card" id="origem">
+      <div class="card-h">
+        <div><span class="eyebrow">Canais</span><h2>Candidatos por origem</h2></div>
+        <span class="note">total · aprovados na triagem</span>
+      </div>
+      <div class="hbars" id="origem-bars"></div>
+      <p class="hint" id="origem-aviso" hidden>Parte dos candidatos está sem origem preenchida na planilha.</p>
+    </section>
+  </div>
+
+  <section class="card" id="sla">
+    <div class="card-h">
+      <div><span class="eyebrow">Prazos</span><h2>SLA por vaga</h2></div>
+      <span class="note">Contado da data de abertura · atenção a partir de 80% do prazo</span>
+    </div>
+    <div class="tbox"><table>
+      <thead><tr><th>Vaga</th><th>Cidade</th><th>Abertura</th><th class="num">Dias em aberto</th><th class="num">Restam</th><th>Status</th><th class="num">Candidatos</th></tr></thead>
+      <tbody id="sla-rows"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="etapas">
+    <div class="card-h">
+      <div><span class="eyebrow">Detalhe</span><h2>Situação em cada etapa</h2></div>
+      <span class="note">Aguardando = aprovado na etapa anterior, ainda sem resultado nesta</span>
+    </div>
+    <div class="tbox"><table>
+      <thead><tr><th>Etapa</th><th class="num">Chegaram</th><th class="num">Avançaram</th><th class="num">Aguardando</th><th class="num">Pendente</th><th class="num">Reprovado</th><th class="num">Desistiu</th><th class="num">Não compareceu</th><th class="num">Conversão</th></tr></thead>
+      <tbody id="etapa-rows"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="candidatos">
+    <div class="card-h">
+      <div><span class="eyebrow">Pessoas</span><h2>Candidatos</h2></div>
+      <input type="search" id="busca" placeholder="Buscar candidato, etapa, situação ou origem" aria-label="Buscar candidato" style="min-width:min(100%, 320px)">
+    </div>
+    <div class="tbox"><table>
+      <thead><tr><th>Candidato</th><th>Vaga</th><th>Origem</th><th>Etapa atual</th><th>Situação</th><th>Motivo</th></tr></thead>
+      <tbody id="cand-rows"></tbody>
+    </table></div>
+  </section>
+</main>
+<footer class="inner">Fonte: planilha do processo seletivo no Google Sheets (abas Candidatos e Vagas). Os dados são lidos a cada abertura e atualizados automaticamente a cada 5 minutos.</footer>
+
+<script>
+/* ======================= CONFIGURAÇÃO ======================= */
+const CONFIG = {
+  // ID da planilha: o trecho entre /d/ e /edit no link do Google Sheets
+  sheetId: '14UWtjwhHcusS1SioqMtxvZno2041dg2-Aut4B_6AVao',
+  abaCandidatos: 'Candidatos',
+  abaVagas: 'Vagas',
+  slaPadrao: 45,          // dias, usado quando a vaga não tem SLA preenchido
+  atencao: 0.8,           // fração do prazo a partir da qual o SLA fica em "Atenção"
+  atualizarACadaMin: 5,   // recarrega os dados sozinho a cada N minutos
+};
+/* ============================================================ */
+
+const ETAPAS = ['Triagem', 'Entrevista RH', 'Entrevista GC', 'Entrevista Heitor', 'Entrevista Duda', 'Proposta', 'Contratado'];
+const SAIU = ['reprovado', 'desistiu', 'nao compareceu', 'recusada', 'recusou'];
+const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+const passou = (s) => /^(aprovad|enviad|aceit|contratad|sim)/.test(norm(s));
+const nf = new Intl.NumberFormat('pt-BR');
+const pf = new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFractionDigits: 0 });
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+let DADOS = { candidatos: [], vagas: [] };
+
+/* ---------- leitura da planilha ---------- */
+function csvParse(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (c !== '\r') cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  const head = (rows.shift() || []).map((h) => h.trim());
+  return rows.filter((r) => r.some((x) => x.trim() !== '')).map((r) => Object.fromEntries(head.map((h, i) => [h, (r[i] ?? '').trim()])));
+}
+async function lerAba(aba) {
+  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(aba)}&t=${Date.now()}`;
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`a aba "${aba}" respondeu com erro ${r.status}`);
+  const txt = await r.text();
+  if (/^\s*</.test(txt)) throw new Error('a planilha não está pública para leitura');
+  return csvParse(txt);
+}
+const campo = (obj, nome) => { const k = Object.keys(obj).find((x) => norm(x) === norm(nome)); return k ? obj[k] : ''; };
+function data(s) {
+  s = String(s || '').trim(); if (!s) return null;
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (m) { const y = m[3].length === 2 ? 2000 + +m[3] : +m[3]; return new Date(y, m[2] - 1, +m[1]); }
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1], m[2] - 1, +m[3]);
+  m = s.match(/^Date\((\d+),(\d+),(\d+)/); if (m) return new Date(+m[1], +m[2], +m[3]);
+  return null;
+}
+const fmtData = (d) => d ? d.toLocaleDateString('pt-BR') : 'Não informada';
+
+function prepararVagas(rows) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  return rows.filter((v) => campo(v, 'Vaga')).map((v) => {
+    const abertura = data(campo(v, 'Data de abertura'));
+    const prazo = Number(String(campo(v, 'SLA (dias)')).replace(',', '.')) || CONFIG.slaPadrao;
+    const dias = abertura ? Math.floor((hoje - abertura) / 864e5) : null;
+    const status = dias == null ? 'Sem data' : dias > prazo ? 'Atrasada' : dias >= prazo * CONFIG.atencao ? 'Atenção' : 'No prazo';
+    return { vaga: campo(v, 'Vaga'), cidade: campo(v, 'Cidade'), abertura, prazo, dias, restam: dias == null ? null : prazo - dias, status };
+  });
+}
+function prepararCandidatos(rows, vagas) {
+  return rows.filter((c) => campo(c, 'Candidato')).map((c) => {
+    const st = ETAPAS.map((e) => campo(c, e));
+    let i = st.findIndex((s) => !passou(s));
+    const etapa = i === -1 ? 'Contratado' : ETAPAS[i];
+    const situacao = i === -1 ? 'Contratado' : (st[i] || 'Aguardando');
+    const vaga = campo(c, 'Vaga'), cidade = campo(c, 'Cidade');
+    const v = vagas.find((x) => x.vaga === vaga && (!cidade || x.cidade === cidade));
+    return {
+      nome: campo(c, 'Candidato'), vaga, cidade, origem: campo(c, 'Origem') || 'Não informada',
+      st, ordem: i === -1 ? ETAPAS.length : i, etapa, situacao, sla: v ? v.status : 'Sem data',
+      motivoDes: campo(c, 'Motivo da desistência'), motivoRep: campo(c, 'Motivo da reprovação'),
+    };
+  });
+}
+
+/* ---------- filtros ---------- */
+const F = { cidade: '', vaga: '', sla: '', origem: '' };
+function preencherSelect(sel, todos, valores) {
+  const atual = sel.value;
+  sel.replaceChildren(new Option(todos, ''), ...[...new Set(valores)].filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR')).map((v) => new Option(v, v)));
+  sel.value = [...sel.options].some((o) => o.value === atual) ? atual : '';
+}
+const filtraVaga = (v) => (!F.cidade || v.cidade === F.cidade) && (!F.vaga || v.vaga === F.vaga) && (!F.sla || v.status === F.sla);
+const filtraCand = (c) => (!F.cidade || c.cidade === F.cidade) && (!F.vaga || c.vaga === F.vaga) && (!F.sla || c.sla === F.sla) && (!F.origem || c.origem === F.origem);
+
+/* ---------- cálculos ---------- */
+function funil(cs) {
+  const linhas = ETAPAS.map((nome, i) => {
+    const chegou = cs.filter((c) => i === 0 || passou(c.st[i - 1]));
+    const conta = (s) => chegou.filter((c) => norm(c.st[i]) === s).length;
+    const avancaram = chegou.filter((c) => passou(c.st[i])).length;
+    const aguardando = chegou.filter((c) => !c.st[i]).length;
+    const pendente = conta('pendente');
+    const sairam = chegou.filter((c) => SAIU.includes(norm(c.st[i]))).length;
+    return { nome, ordem: i, chegaram: chegou.length, avancaram, aguardando, pendente, andamento: aguardando + pendente, sairam,
+      reprovado: conta('reprovado'), desistiu: conta('desistiu'), naoCompareceu: conta('nao compareceu'), taxa: chegou.length ? avancaram / chegou.length : null };
+  });
+  const ultima = Math.max(0, ...linhas.filter((l) => l.chegaram > 0).map((l) => l.ordem));
+  return { visiveis: linhas.slice(0, ultima + 1), ocultas: linhas.slice(ultima + 1) };
+}
+
+/* ---------- desenho ---------- */
+function pill(t) {
+  const tom = { 'Contratado': 't-ok', 'No prazo': 't-ok', 'Aprovado': 't-ok', 'Reprovado': 't-out', 'Desistiu': 't-out', 'Recusada': 't-out', 'Não compareceu': 't-out', 'Atrasada': 't-bad', 'Atenção': 't-warn' }[t] || 't-muted';
+  return el('span', 'pill ' + tom, t);
+}
+function hbars(box, itens, max) {
+  box.replaceChildren();
+  if (!itens.length) { box.append(el('p', 'note', 'Nada para mostrar com os filtros atuais.')); return; }
+  itens.forEach((it) => {
+    const row = el('div', 'hrow'); const head = el('div', 'hhead'); const wrap = el('div', 'hwrap'); const bar = el('div', 'hbar');
+    bar.style.width = `${(it.v / (max || 1)) * 100}%`; bar.style.background = it.cor; wrap.append(bar);
+    const val = el('span', 'hval'); val.append(el('b', null, nf.format(it.v))); if (it.extra) val.append(' ' + it.extra);
+    head.append(el('span', 'hname', it.nome), val); row.append(head, wrap); box.append(row);
+  });
+}
+function cell(tr, conteudo, cls) { const td = tr.insertCell(); if (cls) td.className = cls; if (conteudo instanceof Node) td.append(conteudo); else td.textContent = conteudo; }
+
+function desenhar() {
+  const vagas = DADOS.vagas.filter(filtraVaga);
+  const cs = DADOS.candidatos.filter(filtraCand);
+  const { visiveis, ocultas } = funil(cs);
+  const ultima = visiveis[visiveis.length - 1];
+  const sit = (s) => cs.filter((c) => s.includes(c.situacao)).length;
+  const andamento = sit(['Aguardando', 'Pendente']);
+  const sairam = cs.filter((c) => SAIU.includes(norm(c.situacao))).length;
+  const pior = visiveis.reduce((a, b) => (b.sairam > a.sairam ? b : a), { sairam: 0 });
+
+  // frase-resumo
+  const lede = $('lede'); lede.replaceChildren();
+  if (!cs.length) lede.textContent = 'Nenhum candidato com os filtros atuais.';
+  else {
+    const b = (t) => el('b', null, t);
+    lede.append(b(nf.format(ultima.chegaram)), ' de ', b(nf.format(cs.length)), ' candidatos chegaram à ', b(ultima.nome), '. ',
+      b(nf.format(andamento)), ' seguem em andamento e ', b(nf.format(sairam)), ' saíram do processo');
+    if (pior.sairam) lede.append(', a maioria na ', b(pior.nome));
+    lede.append('.');
+  }
+
+  // indicadores
+  const k = { total: cs.length, andamento, sairam, rh: cs.filter((c) => passou(c.st[1])).length,
+    propostas: cs.filter((c) => passou(c.st[5])).length, contratados: sit(['Contratado']) };
+  document.querySelectorAll('#tiles .v').forEach((e) => { e.textContent = nf.format(k[e.dataset.k]); });
+  $('tiles').classList.remove('skeleton');
+
+  // SLA em destaque: a vaga aberta há mais tempo dentro do filtro
+  const comData = vagas.filter((v) => v.dias != null).sort((a, b) => b.dias - a.dias);
+  const v0 = comData[0];
+  $('sla-com').hidden = !v0; $('sla-sem').hidden = !!v0;
+  const prazo = v0 ? v0.prazo : (vagas[0]?.prazo || CONFIG.slaPadrao);
+  $('sla-prazo').textContent = prazo; $('sla-prazo2').textContent = prazo; $('sla-at').textContent = Math.round(prazo * CONFIG.atencao);
+  $('sla-pill').replaceChildren(pill(v0 ? v0.status : 'Sem data'));
+  if (v0) {
+    $('sla-dia').textContent = nf.format(v0.dias);
+    const f = $('sla-fill'); f.style.width = `${Math.min(1, Math.max(0, v0.dias / v0.prazo)) * 100}%`;
+    f.style.background = v0.status === 'Atrasada' ? 'var(--bad)' : v0.status === 'Atenção' ? 'var(--warn)' : 'var(--accent)';
+    $('sla-rest').textContent = v0.restam >= 0 ? `Faltam ${nf.format(v0.restam)} dias` : `${nf.format(-v0.restam)} dias de atraso`;
+    $('sla-vaga').textContent = `${v0.vaga} · ${v0.cidade}` + (comData.length > 1 ? ` · mais antiga de ${comData.length}` : '');
+  }
+
+  // funil com conectores de conversão
+  const box = $('funnel'); box.replaceChildren();
+  const tip = el('div', 'tip'); tip.hidden = true;
+  const max = Math.max(1, ...visiveis.map((l) => l.chegaram));
+  const larg = (l) => Math.max(l.chegaram / max, 0.03) * 100;
+  const segs = [['avancaram', 'Avançaram', 'var(--accent)'], ['andamento', 'Em andamento', 'var(--wait)'], ['sairam', 'Saíram', 'var(--out)']];
+  visiveis.forEach((l, i) => {
+    if (i > 0) {
+      const ant = visiveis[i - 1];
+      const conn = el('div', 'fconn'); const flow = el('div', 'flow');
+      const w1 = larg(ant), w2 = larg(l);
+      flow.style.clipPath = `polygon(${50 - w1 / 2}% 0, ${50 + w1 / 2}% 0, ${50 + w2 / 2}% 100%, ${50 - w2 / 2}% 100%)`;
+      const chip = el('span', 'chip' + (ant.taxa != null && ant.taxa < 0.3 ? ' low' : ''), `↓ ${ant.taxa == null ? '—' : pf.format(ant.taxa)} seguiram`);
+      conn.append(el('span'), flow, chip); box.append(conn);
+    }
+    const row = el('div', 'frow'); const area = el('div', 'farea'); const bar = el('div', 'fbar');
+    bar.style.width = `${larg(l)}%`;
+    segs.forEach(([f, nome, cor]) => {
+      if (!l[f]) return;
+      const s = el('div', 'seg'); s.style.flex = `${l[f]} 1 0`; s.style.background = cor;
+      s.addEventListener('pointerenter', () => { tip.replaceChildren(el('div', 'h', l.nome), el('div', null, `${nome}: ${nf.format(l[f])} de ${nf.format(l.chegaram)} (${pf.format(l[f] / l.chegaram)})`)); tip.hidden = false; });
+      s.addEventListener('pointermove', (ev) => {
+        const r = box.getBoundingClientRect();
+        tip.style.left = `${Math.max(0, Math.min(ev.clientX - r.left + 14, r.width - tip.offsetWidth - 4))}px`;
+        tip.style.top = `${ev.clientY - r.top + 16}px`;
+      });
+      s.addEventListener('pointerleave', () => { tip.hidden = true; });
+      bar.append(s);
+    });
+    area.append(bar);
+    const nome = el('div', 'fname'); nome.append(el('small', null, `Etapa ${i + 1}`), el('span', null, l.nome));
+    const stat = el('div', 'fstat'); const big = el('span', 'big', nf.format(l.chegaram)); big.append(el('small', null, ' chegaram'));
+    stat.append(big, el('span', 'parts', `${nf.format(l.avancaram)} avançaram · ${nf.format(l.andamento)} em andamento · ${nf.format(l.sairam)} saíram`));
+    row.append(nome, area, stat); box.append(row);
+  });
+  box.append(tip);
+  const prox = $('proximas'); prox.replaceChildren();
+  prox.hidden = !ocultas.length;
+  if (ocultas.length) { prox.append('Próximas etapas, ainda sem candidatos:'); ocultas.forEach((l) => prox.append(el('span', 'ghost', l.nome))); }
+
+  // saídas
+  const mapa = new Map();
+  cs.forEach((c) => {
+    const s = norm(c.situacao); let nome, cor;
+    if (s === 'desistiu') { nome = c.motivoDes || `Desistiu na ${c.etapa}`; cor = 'var(--accent-2)'; }
+    else if (s === 'reprovado') { nome = c.motivoRep || `Reprovado na ${c.etapa}`; cor = 'var(--out)'; }
+    else if (s === 'nao compareceu') { nome = `Faltou na ${c.etapa}`; cor = 'var(--wait)'; }
+    else if (s === 'recusada' || s === 'recusou') { nome = 'Recusou a proposta'; cor = 'var(--wait)'; }
+    else return;
+    const key = nome + '|' + cor; mapa.set(key, (mapa.get(key) || 0) + 1);
+  });
+  const said = [...mapa].map(([k, v]) => { const [nome, cor] = k.split('|'); return { nome, cor, v }; }).sort((a, b) => b.v - a.v);
+  hbars($('saidas-bars'), said, Math.max(0, ...said.map((x) => x.v)));
+
+  // origem
+  const og = new Map();
+  cs.forEach((c) => { const o = og.get(c.origem) || { n: 0, t: 0 }; o.n++; if (passou(c.st[0])) o.t++; og.set(c.origem, o); });
+  const ori = [...og].map(([nome, o]) => ({ nome, v: o.n, cor: nome === 'Não informada' ? 'var(--wait)' : 'var(--accent)', extra: `· ${nf.format(o.t)} na triagem` })).sort((a, b) => b.v - a.v);
+  hbars($('origem-bars'), ori, Math.max(0, ...ori.map((x) => x.v)));
+  $('origem-aviso').hidden = !og.has('Não informada');
+
+  // tabela SLA
+  const tb = $('sla-rows'); tb.replaceChildren();
+  if (!vagas.length) { const td = tb.insertRow().insertCell(); td.colSpan = 7; td.className = 't-muted'; td.textContent = 'Nenhuma vaga encontrada na aba Vagas com os filtros atuais.'; }
+  vagas.forEach((v) => {
+    const tr = tb.insertRow();
+    cell(tr, v.vaga); cell(tr, v.cidade); cell(tr, fmtData(v.abertura));
+    cell(tr, v.dias == null ? '—' : nf.format(v.dias), 'num');
+    cell(tr, v.restam == null ? '—' : v.restam >= 0 ? `${nf.format(v.restam)} dias` : `${nf.format(-v.restam)} de atraso`, 'num');
+    cell(tr, pill(v.status));
+    cell(tr, nf.format(DADOS.candidatos.filter((c) => c.vaga === v.vaga && c.cidade === v.cidade).length), 'num');
+  });
+
+  // tabela etapas
+  const te = $('etapa-rows'); te.replaceChildren();
+  visiveis.forEach((l) => {
+    const tr = te.insertRow(); cell(tr, l.nome);
+    ['chegaram', 'avancaram', 'aguardando', 'pendente', 'reprovado', 'desistiu', 'naoCompareceu'].forEach((f) => cell(tr, nf.format(l[f]), 'num'));
+    cell(tr, l.taxa == null ? '—' : pf.format(l.taxa), 'num');
+  });
+
+  desenharCandidatos(cs);
+}
+function desenharCandidatos(cs = DADOS.candidatos.filter(filtraCand)) {
+  const q = norm($('busca').value);
+  const tb = $('cand-rows'); tb.replaceChildren();
+  cs.filter((c) => !q || norm([c.nome, c.vaga, c.origem, c.etapa, c.situacao, c.motivoDes, c.motivoRep].join(' ')).includes(q))
+    .sort((a, b) => b.ordem - a.ordem || a.nome.localeCompare(b.nome, 'pt-BR'))
+    .forEach((c) => {
+      const tr = tb.insertRow();
+      cell(tr, c.nome); cell(tr, c.vaga); cell(tr, c.origem); cell(tr, c.etapa); cell(tr, pill(c.situacao));
+      cell(tr, c.motivoDes || c.motivoRep || '');
+    });
+}
+
+/* ---------- carga ---------- */
+async function carregar() {
+  $('status').textContent = 'Atualizando…';
+  try {
+    const [cRows, vRows] = await Promise.all([lerAba(CONFIG.abaCandidatos), lerAba(CONFIG.abaVagas)]);
+    const vagas = prepararVagas(vRows);
+    DADOS = { vagas, candidatos: prepararCandidatos(cRows, vagas) };
+    preencherSelect($('f-cidade'), 'Todas as cidades', DADOS.vagas.map((v) => v.cidade).concat(DADOS.candidatos.map((c) => c.cidade)));
+    preencherSelect($('f-vaga'), 'Todas as vagas', DADOS.vagas.map((v) => v.vaga).concat(DADOS.candidatos.map((c) => c.vaga)));
+    preencherSelect($('f-origem'), 'Todas as origens', DADOS.candidatos.map((c) => c.origem));
+    F.cidade = $('f-cidade').value; F.vaga = $('f-vaga').value; F.origem = $('f-origem').value;
+    $('erro').hidden = true;
+    desenhar();
+    $('dot').classList.remove('err');
+    $('status').textContent = `${nf.format(DADOS.candidatos.length)} candidatos · ${nf.format(DADOS.vagas.length)} vaga(s) · atualizado às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (e) {
+    $('erro').hidden = false; $('erro-msg').textContent = `Motivo: ${e.message}.`;
+    $('status').textContent = 'Falha ao ler a planilha'; $('dot').classList.add('err');
+  }
+}
+['cidade', 'vaga', 'sla', 'origem'].forEach((k) => $('f-' + k).addEventListener('change', (e) => { F[k] = e.target.value; desenhar(); }));
+$('limpar').addEventListener('click', () => { ['cidade', 'vaga', 'sla', 'origem'].forEach((k) => { F[k] = ''; $('f-' + k).value = ''; }); $('busca').value = ''; desenhar(); });
+$('busca').addEventListener('input', () => desenharCandidatos());
+$('refresh').addEventListener('click', carregar);
+carregar();
+setInterval(carregar, CONFIG.atualizarACadaMin * 60 * 1000);
+</script>
+
+</body>
+</html>
