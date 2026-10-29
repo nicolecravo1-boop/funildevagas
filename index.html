@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Funil Comercial PG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: cabeçalho com frase-resumo + cartão de SLA, filtros, indicadores, funil largo e cartões em grade. */
+  :root {
+    --bg: #F3F5F6; --panel: #FFFFFF; --ink: #1D2B33; --muted: #5B6B74; --line: #DCE2E6;
+    --accent: #0F6E6E; --accent-soft: #9CC9C6; --wait: #C9D2D8; --out: #C2453A; --warn: #B7791F; --ok: #2F7D4F;
+    --tip: #FFFFFF;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --r: 10px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11181C; --panel: #18232A; --ink: #E6EDF0; --muted: #93A4AD; --line: #2A3A43;
+      --accent: #3FB3AA; --accent-soft: #2C6E6A; --wait: #3A4A53; --out: #E2675C; --warn: #E0A642; --ok: #5CC28A;
+      --tip: #22313A; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11181C; --panel: #18232A; --ink: #E6EDF0; --muted: #93A4AD; --line: #2A3A43;
+    --accent: #3FB3AA; --accent-soft: #2C6E6A; --wait: #3A4A53; --out: #E2675C; --warn: #E0A642; --ok: #5CC28A;
+    --tip: #22313A; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+  .wrap { max-width: 1200px; margin-inline: auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 24px; }
+  .bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
+  .eyebrow { letter-spacing: .08em; text-transform: uppercase; font-size: 12px; font-weight: 600; color: var(--accent); }
+  .btn { font: inherit; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(min(100%, 280px), 320px); gap: 20px; }
+  @media (max-width: 760px) { .top { grid-template-columns: 1fr; } }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 44px); line-height: 1.05; margin: 4px 0 12px; letter-spacing: -.01em; }
+  .lede { font-size: 18px; line-height: 1.5; margin: 0; max-width: 60ch; color: var(--muted); text-wrap: pretty; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .card h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; }
+  .note { margin: 0; font-size: 13px; color: var(--muted); }
+  .label { font-size: 12px; color: var(--muted); }
+  .sla-big { font-family: var(--display); font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .sla-big small { font-family: var(--body); font-size: 15px; font-weight: 400; color: var(--muted); }
+  .track { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .fill { height: 100%; width: 0; border-radius: 999px; background: var(--accent); transition: width .6s ease; }
+  .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .filters label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  select, input[type=search] { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 150px; max-width: 100%; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+  .tile .v { font-family: var(--display); font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 16px; }
+  .wide { grid-column: 1 / -1; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  /* funil */
+  .funnel { position: relative; display: flex; flex-direction: column; gap: 6px; }
+  .frow { display: grid; grid-template-columns: 140px minmax(0, 1fr) 190px; gap: 14px; align-items: center; }
+  .fname { font-size: 13px; font-weight: 600; }
+  .farea { display: flex; justify-content: center; min-width: 0; }
+  .fbar { display: flex; gap: 2px; height: 46px; border-radius: 8px; overflow: hidden; min-width: 6px; transition: width .6s ease; }
+  .seg { height: 100%; }
+  .seg:hover { filter: brightness(1.08); }
+  .fstat { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .fstat b { color: var(--ink); }
+  @media (max-width: 620px) { .frow { grid-template-columns: 1fr; gap: 4px; padding-block: 4px; } .farea { justify-content: flex-start; } }
+  .tip { position: absolute; pointer-events: none; background: var(--tip); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgb(0 0 0 / .15); padding: 6px 10px; font-size: 12px; white-space: nowrap; z-index: 3; }
+  .tip .h { color: var(--muted); }
+  /* barras horizontais */
+  .hbars { display: flex; flex-direction: column; gap: 8px; }
+  .hrow { display: grid; grid-template-columns: minmax(120px, 210px) minmax(0, 1fr); gap: 12px; align-items: center; }
+  .hname { font-size: 13px; }
+  .htrack { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; }
+  .hwrap { min-width: 0; }
+  .hbar { height: 20px; border-radius: 5px; min-width: 3px; }
+  .hval { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+  .hval b { color: var(--ink); }
+  @media (max-width: 480px) { .hrow { grid-template-columns: 1fr; gap: 2px; } }
+  /* tabelas */
+  .tbox { overflow: auto; max-height: 460px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .num { text-align: right; }
+  .pill { display: inline-block; padding: 0 9px; border-radius: 999px; border: 1px solid currentColor; font-size: 12px; white-space: nowrap; }
+  .t-ok { color: var(--ok); } .t-bad { color: var(--out); } .t-warn { color: var(--warn); } .t-muted { color: var(--muted); }
+  .alert { border-left: 4px solid var(--out); }
+  .warnline { margin: 0; font-size: 13px; color: var(--warn); }
+  .skeleton .v, .skeleton b { color: transparent; background: var(--line); border-radius: 6px; }
+  @media (prefers-reduced-motion: reduce) { .fbar, .fill { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <span class="eyebrow">Processo seletivo · Comercial PG</span>
+    <span><span id="status">Carregando dados da planilha…</span> <button class="btn" id="refresh" type="button">Atualizar agora</button></span>
+  </div>
+
+  <section class="card alert" id="erro" hidden>
+    <h2>Não consegui ler a planilha</h2>
+    <p class="note" id="erro-msg"></p>
+    <p class="note">Confira se a planilha está compartilhada como "Qualquer pessoa com o link pode ver" e se as abas se chamam <b>Candidatos</b> e <b>Vagas</b>.</p>
+  </section>
+
+  <div class="top">
+    <header>
+      <h1>Funil Comercial PG</h1>
+      <p class="lede" id="lede">Carregando…</p>
+    </header>
+    <aside class="card" id="sla-card">
+      <span class="label">SLA da vaga · prazo de <span id="sla-prazo">45</span> dias</span>
+      <div id="sla-com">
+        <div class="sla-big">Dia <span id="sla-dia">—</span> <small>de <span id="sla-prazo2">45</span></small></div>
+        <div class="track" style="margin-top:10px"><div class="fill" id="sla-fill"></div></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)"><span id="sla-pill"></span><span id="sla-rest"></span></div>
+        <div class="note" id="sla-vaga" style="margin-top:6px"></div>
+      </div>
+      <div id="sla-sem" hidden>
+        <div class="sla-big">Sem data</div>
+        <p class="note">Preencha a data de abertura na aba Vagas da planilha.</p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="filters">
+    <label for="f-cidade">Cidade<select id="f-cidade"></select></label>
+    <label for="f-vaga">Vaga<select id="f-vaga"></select></label>
+    <label for="f-sla">SLA da vaga<select id="f-sla">
+      <option value="">Todas</option><option>No prazo</option><option value="Atenção">Atenção (80% do prazo)</option><option>Atrasada</option><option>Sem data</option>
+    </select></label>
+    <label for="f-origem">Origem<select id="f-origem"></select></label>
+    <button class="btn" id="limpar" type="button">Limpar filtros</button>
+  </div>
+
+  <section class="tiles skeleton" id="tiles">
+    <div class="tile"><span class="label">Candidatos</span><span class="v" data-k="total">00</span><span class="note">Total na planilha</span></div>
+    <div class="tile"><span class="label">Em andamento</span><span class="v" data-k="andamento">00</span><span class="note">Aguardando ou pendentes</span></div>
+    <div class="tile"><span class="label">Saíram do processo</span><span class="v" data-k="sairam">00</span><span class="note">Reprovados, desistentes e ausentes</span></div>
+    <div class="tile"><span class="label">Passaram no RH</span><span class="v" data-k="rh">00</span><span class="note">Aprovados na Entrevista RH</span></div>
+    <div class="tile"><span class="label">Propostas enviadas</span><span class="v" data-k="propostas">00</span><span class="note">Envio de proposta</span></div>
+    <div class="tile"><span class="label">Contratados</span><span class="v" data-k="contratados">00</span><span class="note">Fecharam a vaga</span></div>
+  </section>
+
+  <div class="grid">
+    <section class="card wide" id="funil">
+      <h2>Funil por etapa</h2>
+      <p class="note">Cada faixa mostra quem chegou à etapa: quem avançou, quem ainda está nela e quem saiu. Passe o mouse para ver os números.</p>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--accent)"></i>Avançou</span>
+        <span><i class="sw" style="background:var(--wait)"></i>Em andamento</span>
+        <span><i class="sw" style="background:var(--out)"></i>Saiu</span>
+      </div>
+      <div class="funnel" id="funnel"></div>
+      <p class="note" id="proximas"></p>
+    </section>
+
+    <section class="card" id="saidas">
+      <h2>Por que e onde saíram</h2>
+      <p class="note">Desistências e reprovações pelo motivo anotado; sem motivo, pela etapa.</p>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--warn)"></i>Desistência</span>
+        <span><i class="sw" style="background:var(--out)"></i>Reprovação</span>
+        <span><i class="sw" style="background:var(--wait)"></i>Não compareceu / recusou</span>
+      </div>
+      <div class="hbars" id="saidas-bars"></div>
+    </section>
+
+    <section class="card" id="origem">
+      <h2>Candidatos por origem</h2>
+      <p class="note">Quantos vieram de cada canal e quantos passaram da triagem.</p>
+      <div class="hbars" id="origem-bars"></div>
+      <p class="warnline" id="origem-aviso" hidden>Parte dos candidatos está sem origem preenchida na planilha.</p>
+    </section>
+
+    <section class="card wide" id="sla">
+      <h2>SLA por vaga</h2>
+      <p class="note">Prazo contado da data de abertura. Atenção a partir de 80% do prazo.</p>
+      <div class="tbox"><table>
+        <thead><tr><th>Vaga</th><th>Cidade</th><th>Abertura</th><th class="num">Dias</th><th class="num">Restam</th><th>Status</th><th class="num">Candidatos</th></tr></thead>
+        <tbody id="sla-rows"></tbody>
+      </table></div>
+    </section>
+
+    <section class="card wide" id="etapas">
+      <h2>Situação em cada etapa</h2>
+      <p class="note">"Aguardando" são aprovados na etapa anterior que ainda não têm resultado nesta.</p>
+      <div class="tbox"><table>
+        <thead><tr><th>Etapa</th><th class="num">Chegaram</th><th class="num">Avançaram</th><th class="num">Aguardando</th><th class="num">Pendente</th><th class="num">Reprovado</th><th class="num">Desistiu</th><th class="num">Não compareceu</th><th class="num">Conversão</th></tr></thead>
+        <tbody id="etapa-rows"></tbody>
+      </table></div>
+    </section>
+
+    <section class="card wide" id="candidatos">
+      <h2>Candidatos</h2>
+      <p class="note">Onde cada candidato está agora, do mais avançado ao menos avançado.</p>
+      <input type="search" id="busca" placeholder="Buscar candidato, etapa, situação ou origem" aria-label="Buscar candidato" style="max-width:340px">
+      <div class="tbox"><table>
+        <thead><tr><th>Candidato</th><th>Vaga</th><th>Origem</th><th>Etapa atual</th><th>Situação</th><th>Motivo</th></tr></thead>
+        <tbody id="cand-rows"></tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+
+<script>
+/* ======================= CONFIGURAÇÃO ======================= */
+const CONFIG = {
+  // ID da planilha: o trecho entre /d/ e /edit no link do Google Sheets
+  sheetId: '14UWtjwhHcusS1SioqMtxvZno2041dg2-Aut4B_6AVao',
+  abaCandidatos: 'Candidatos',
+  abaVagas: 'Vagas',
+  slaPadrao: 45,          // dias, usado quando a vaga não tem SLA preenchido
+  atencao: 0.8,           // fração do prazo a partir da qual o SLA fica em "Atenção"
+  atualizarACadaMin: 5,   // recarrega os dados sozinho a cada N minutos
+};
+/* ============================================================ */
+
+const ETAPAS = ['Triagem', 'Entrevista RH', 'Entrevista GC', 'Entrevista Heitor', 'Entrevista Duda', 'Proposta', 'Contratado'];
+const SAIU = ['reprovado', 'desistiu', 'nao compareceu', 'recusada', 'recusou'];
+const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+const passou = (s) => /^(aprovad|enviad|aceit|contratad|sim)/.test(norm(s));
+const nf = new Intl.NumberFormat('pt-BR');
+const pf = new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFractionDigits: 0 });
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+let DADOS = { candidatos: [], vagas: [] };
+
+/* ---------- leitura da planilha ---------- */
+function csvParse(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (c !== '\r') cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  const head = (rows.shift() || []).map((h) => h.trim());
+  return rows.filter((r) => r.some((x) => x.trim() !== '')).map((r) => Object.fromEntries(head.map((h, i) => [h, (r[i] ?? '').trim()])));
+}
+async function lerAba(aba) {
+  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(aba)}&t=${Date.now()}`;
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`a aba "${aba}" respondeu com erro ${r.status}`);
+  const txt = await r.text();
+  if (/^\s*</.test(txt)) throw new Error('a planilha não está pública para leitura');
+  return csvParse(txt);
+}
+const campo = (obj, nome) => { const k = Object.keys(obj).find((x) => norm(x) === norm(nome)); return k ? obj[k] : ''; };
+function data(s) {
+  s = String(s || '').trim(); if (!s) return null;
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (m) { const y = m[3].length === 2 ? 2000 + +m[3] : +m[3]; return new Date(y, m[2] - 1, +m[1]); }
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1], m[2] - 1, +m[3]);
+  m = s.match(/^Date\((\d+),(\d+),(\d+)/); if (m) return new Date(+m[1], +m[2], +m[3]);
+  return null;
+}
+const fmtData = (d) => d ? d.toLocaleDateString('pt-BR') : 'Não informada';
+
+function prepararVagas(rows) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  return rows.filter((v) => campo(v, 'Vaga')).map((v) => {
+    const abertura = data(campo(v, 'Data de abertura'));
+    const prazo = Number(String(campo(v, 'SLA (dias)')).replace(',', '.')) || CONFIG.slaPadrao;
+    const dias = abertura ? Math.floor((hoje - abertura) / 864e5) : null;
+    const status = dias == null ? 'Sem data' : dias > prazo ? 'Atrasada' : dias >= prazo * CONFIG.atencao ? 'Atenção' : 'No prazo';
+    return { vaga: campo(v, 'Vaga'), cidade: campo(v, 'Cidade'), abertura, prazo, dias, restam: dias == null ? null : prazo - dias, status };
+  });
+}
+function prepararCandidatos(rows, vagas) {
+  return rows.filter((c) => campo(c, 'Candidato')).map((c) => {
+    const st = ETAPAS.map((e) => campo(c, e));
+    let i = st.findIndex((s) => !passou(s));
+    const etapa = i === -1 ? 'Contratado' : ETAPAS[i];
+    const situacao = i === -1 ? 'Contratado' : (st[i] || 'Aguardando');
+    const vaga = campo(c, 'Vaga'), cidade = campo(c, 'Cidade');
+    const v = vagas.find((x) => x.vaga === vaga && (!cidade || x.cidade === cidade));
+    return {
+      nome: campo(c, 'Candidato'), vaga, cidade, origem: campo(c, 'Origem') || 'Não informada',
+      st, ordem: i === -1 ? ETAPAS.length : i, etapa, situacao, sla: v ? v.status : 'Sem data',
+      motivoDes: campo(c, 'Motivo da desistência'), motivoRep: campo(c, 'Motivo da reprovação'),
+    };
+  });
+}
+
+/* ---------- filtros ---------- */
+const F = { cidade: '', vaga: '', sla: '', origem: '' };
+function preencherSelect(sel, todos, valores) {
+  const atual = sel.value;
+  sel.replaceChildren(new Option(todos, ''), ...[...new Set(valores)].filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR')).map((v) => new Option(v, v)));
+  sel.value = [...sel.options].some((o) => o.value === atual) ? atual : '';
+}
+const filtraVaga = (v) => (!F.cidade || v.cidade === F.cidade) && (!F.vaga || v.vaga === F.vaga) && (!F.sla || v.status === F.sla);
+const filtraCand = (c) => (!F.cidade || c.cidade === F.cidade) && (!F.vaga || c.vaga === F.vaga) && (!F.sla || c.sla === F.sla) && (!F.origem || c.origem === F.origem);
+
+/* ---------- cálculos ---------- */
+function funil(cs) {
+  const linhas = ETAPAS.map((nome, i) => {
+    const chegou = cs.filter((c) => i === 0 || passou(c.st[i - 1]));
+    const conta = (s) => chegou.filter((c) => norm(c.st[i]) === s).length;
+    const avancaram = chegou.filter((c) => passou(c.st[i])).length;
+    const aguardando = chegou.filter((c) => !c.st[i]).length;
+    const pendente = conta('pendente');
+    const sairam = chegou.filter((c) => SAIU.includes(norm(c.st[i]))).length;
+    return { nome, ordem: i, chegaram: chegou.length, avancaram, aguardando, pendente, andamento: aguardando + pendente, sairam,
+      reprovado: conta('reprovado'), desistiu: conta('desistiu'), naoCompareceu: conta('nao compareceu'), taxa: chegou.length ? avancaram / chegou.length : null };
+  });
+  const ultima = Math.max(0, ...linhas.filter((l) => l.chegaram > 0).map((l) => l.ordem));
+  return { visiveis: linhas.slice(0, ultima + 1), ocultas: linhas.slice(ultima + 1) };
+}
+
+/* ---------- desenho ---------- */
+function pill(t) {
+  const tom = { 'Contratado': 't-ok', 'No prazo': 't-ok', 'Reprovado': 't-bad', 'Desistiu': 't-bad', 'Recusada': 't-bad', 'Atrasada': 't-bad', 'Não compareceu': 't-warn', 'Atenção': 't-warn', 'Pendente': 't-warn' }[t] || 't-muted';
+  return el('span', 'pill ' + tom, t);
+}
+function hbars(box, itens, max) {
+  box.replaceChildren();
+  if (!itens.length) { box.append(el('p', 'note', 'Nada para mostrar com os filtros atuais.')); return; }
+  itens.forEach((it) => {
+    const row = el('div', 'hrow'); const track = el('div', 'htrack'); const wrap = el('div', 'hwrap'); const bar = el('div', 'hbar');
+    bar.style.width = `${(it.v / (max || 1)) * 100}%`; bar.style.background = it.cor; wrap.append(bar);
+    const val = el('span', 'hval'); val.append(el('b', null, nf.format(it.v))); if (it.extra) val.append(' ' + it.extra);
+    track.append(wrap, val); row.append(el('span', 'hname', it.nome), track); box.append(row);
+  });
+}
+function cell(tr, conteudo, cls) { const td = tr.insertCell(); if (cls) td.className = cls; if (conteudo instanceof Node) td.append(conteudo); else td.textContent = conteudo; }
+
+function desenhar() {
+  const vagas = DADOS.vagas.filter(filtraVaga);
+  const cs = DADOS.candidatos.filter(filtraCand);
+  const { visiveis, ocultas } = funil(cs);
+  const ultima = visiveis[visiveis.length - 1];
+  const sit = (s) => cs.filter((c) => s.includes(c.situacao)).length;
+  const andamento = sit(['Aguardando', 'Pendente']);
+  const sairam = cs.filter((c) => SAIU.includes(norm(c.situacao))).length;
+  const pior = visiveis.reduce((a, b) => (b.sairam > a.sairam ? b : a), { sairam: 0 });
+
+  // frase-resumo
+  const lede = $('lede'); lede.replaceChildren();
+  if (!cs.length) lede.textContent = 'Nenhum candidato com os filtros atuais.';
+  else {
+    const b = (t) => el('b', null, t);
+    lede.append(b(nf.format(ultima.chegaram)), ' de ', b(nf.format(cs.length)), ' candidatos chegaram à ', b(ultima.nome), '. ',
+      b(nf.format(andamento)), ' seguem em andamento e ', b(nf.format(sairam)), ' saíram do processo');
+    if (pior.sairam) lede.append(', a maioria na ', b(pior.nome));
+    lede.append('.');
+  }
+
+  // indicadores
+  const k = { total: cs.length, andamento, sairam, rh: cs.filter((c) => passou(c.st[1])).length,
+    propostas: cs.filter((c) => passou(c.st[5])).length, contratados: sit(['Contratado']) };
+  document.querySelectorAll('#tiles .v').forEach((e) => { e.textContent = nf.format(k[e.dataset.k]); });
+  $('tiles').classList.remove('skeleton');
+
+  // SLA em destaque: a vaga aberta há mais tempo dentro do filtro
+  const comData = vagas.filter((v) => v.dias != null).sort((a, b) => b.dias - a.dias);
+  const v0 = comData[0];
+  $('sla-com').hidden = !v0; $('sla-sem').hidden = !!v0;
+  const prazo = v0 ? v0.prazo : (vagas[0]?.prazo || CONFIG.slaPadrao);
+  $('sla-prazo').textContent = prazo; $('sla-prazo2').textContent = prazo;
+  if (v0) {
+    $('sla-dia').textContent = nf.format(v0.dias);
+    const f = $('sla-fill'); f.style.width = `${Math.min(1, Math.max(0, v0.dias / v0.prazo)) * 100}%`;
+    f.style.background = v0.status === 'Atrasada' ? 'var(--out)' : v0.status === 'Atenção' ? 'var(--warn)' : 'var(--accent)';
+    $('sla-pill').replaceChildren(pill(v0.status));
+    $('sla-rest').textContent = v0.restam >= 0 ? `Faltam ${nf.format(v0.restam)} dias` : `${nf.format(-v0.restam)} dias de atraso`;
+    $('sla-vaga').textContent = `${v0.vaga} · ${v0.cidade}` + (comData.length > 1 ? ` (a mais antiga de ${comData.length} vagas)` : '');
+  }
+
+  // funil afunilado
+  const box = $('funnel'); box.replaceChildren();
+  const tip = el('div', 'tip'); tip.hidden = true;
+  const max = Math.max(1, ...visiveis.map((l) => l.chegaram));
+  const segs = [['avancaram', 'Avançaram', 'var(--accent)'], ['andamento', 'Em andamento', 'var(--wait)'], ['sairam', 'Saíram', 'var(--out)']];
+  visiveis.forEach((l) => {
+    const row = el('div', 'frow'); const area = el('div', 'farea'); const bar = el('div', 'fbar');
+    bar.style.width = `${Math.max(l.chegaram / max, 0.02) * 100}%`;
+    segs.forEach(([f, nome, cor]) => {
+      if (!l[f]) return;
+      const s = el('div', 'seg'); s.style.flex = `${l[f]} 1 0`; s.style.background = cor;
+      s.addEventListener('pointerenter', () => { tip.replaceChildren(el('div', 'h', l.nome), el('div', null, `${nome}: ${nf.format(l[f])} de ${nf.format(l.chegaram)}`)); tip.hidden = false; });
+      s.addEventListener('pointermove', (ev) => {
+        const r = box.getBoundingClientRect();
+        tip.style.left = `${Math.max(0, Math.min(ev.clientX - r.left + 12, r.width - tip.offsetWidth - 4))}px`;
+        tip.style.top = `${ev.clientY - r.top + 14}px`;
+      });
+      s.addEventListener('pointerleave', () => { tip.hidden = true; });
+      bar.append(s);
+    });
+    area.append(bar);
+    const stat = el('span', 'fstat'); stat.append(el('b', null, nf.format(l.avancaram)), ` de ${nf.format(l.chegaram)} avançaram` + (l.taxa != null ? ` (${pf.format(l.taxa)})` : ''));
+    row.append(el('span', 'fname', l.nome), area, stat); box.append(row);
+  });
+  box.append(tip);
+  $('proximas').textContent = ocultas.length ? `Próximas etapas, ainda sem candidatos: ${ocultas.map((l) => l.nome).join(' → ')}.` : '';
+
+  // saídas
+  const mapa = new Map();
+  cs.forEach((c) => {
+    const s = norm(c.situacao); let nome, cor;
+    if (s === 'desistiu') { nome = c.motivoDes || `Desistiu na ${c.etapa}`; cor = 'var(--warn)'; }
+    else if (s === 'reprovado') { nome = c.motivoRep || `Reprovado na ${c.etapa}`; cor = 'var(--out)'; }
+    else if (s === 'nao compareceu') { nome = `Faltou na ${c.etapa}`; cor = 'var(--wait)'; }
+    else if (s === 'recusada' || s === 'recusou') { nome = 'Recusou a proposta'; cor = 'var(--wait)'; }
+    else return;
+    const key = nome + '|' + cor; mapa.set(key, (mapa.get(key) || 0) + 1);
+  });
+  const said = [...mapa].map(([k, v]) => { const [nome, cor] = k.split('|'); return { nome, cor, v }; }).sort((a, b) => b.v - a.v);
+  hbars($('saidas-bars'), said, Math.max(0, ...said.map((x) => x.v)));
+
+  // origem
+  const og = new Map();
+  cs.forEach((c) => { const o = og.get(c.origem) || { n: 0, t: 0 }; o.n++; if (passou(c.st[0])) o.t++; og.set(c.origem, o); });
+  const ori = [...og].map(([nome, o]) => ({ nome, v: o.n, cor: nome === 'Não informada' ? 'var(--wait)' : 'var(--accent)', extra: `· ${nf.format(o.t)} passaram na triagem` })).sort((a, b) => b.v - a.v);
+  hbars($('origem-bars'), ori, Math.max(0, ...ori.map((x) => x.v)));
+  $('origem-aviso').hidden = !og.has('Não informada');
+
+  // tabela SLA
+  const tb = $('sla-rows'); tb.replaceChildren();
+  vagas.forEach((v) => {
+    const tr = tb.insertRow();
+    cell(tr, v.vaga); cell(tr, v.cidade); cell(tr, fmtData(v.abertura));
+    cell(tr, v.dias == null ? '—' : nf.format(v.dias), 'num');
+    cell(tr, v.restam == null ? '—' : v.restam >= 0 ? `${nf.format(v.restam)} dias` : `${nf.format(-v.restam)} de atraso`, 'num');
+    cell(tr, pill(v.status));
+    cell(tr, nf.format(DADOS.candidatos.filter((c) => c.vaga === v.vaga && c.cidade === v.cidade).length), 'num');
+  });
+
+  // tabela etapas
+  const te = $('etapa-rows'); te.replaceChildren();
+  visiveis.forEach((l) => {
+    const tr = te.insertRow(); cell(tr, l.nome);
+    ['chegaram', 'avancaram', 'aguardando', 'pendente', 'reprovado', 'desistiu', 'naoCompareceu'].forEach((f) => cell(tr, nf.format(l[f]), 'num'));
+    cell(tr, l.taxa == null ? '—' : pf.format(l.taxa), 'num');
+  });
+
+  desenharCandidatos(cs);
+}
+function desenharCandidatos(cs = DADOS.candidatos.filter(filtraCand)) {
+  const q = norm($('busca').value);
+  const tb = $('cand-rows'); tb.replaceChildren();
+  cs.filter((c) => !q || norm([c.nome, c.vaga, c.origem, c.etapa, c.situacao, c.motivoDes, c.motivoRep].join(' ')).includes(q))
+    .sort((a, b) => b.ordem - a.ordem || a.nome.localeCompare(b.nome, 'pt-BR'))
+    .forEach((c) => {
+      const tr = tb.insertRow();
+      cell(tr, c.nome); cell(tr, c.vaga); cell(tr, c.origem); cell(tr, c.etapa); cell(tr, pill(c.situacao));
+      cell(tr, c.motivoDes || c.motivoRep || '');
+    });
+}
+
+/* ---------- carga ---------- */
+async function carregar() {
+  $('status').textContent = 'Atualizando…';
+  try {
+    const [cRows, vRows] = await Promise.all([lerAba(CONFIG.abaCandidatos), lerAba(CONFIG.abaVagas)]);
+    const vagas = prepararVagas(vRows);
+    DADOS = { vagas, candidatos: prepararCandidatos(cRows, vagas) };
+    preencherSelect($('f-cidade'), 'Todas as cidades', DADOS.vagas.map((v) => v.cidade).concat(DADOS.candidatos.map((c) => c.cidade)));
+    preencherSelect($('f-vaga'), 'Todas as vagas', DADOS.vagas.map((v) => v.vaga).concat(DADOS.candidatos.map((c) => c.vaga)));
+    preencherSelect($('f-origem'), 'Todas as origens', DADOS.candidatos.map((c) => c.origem));
+    F.cidade = $('f-cidade').value; F.vaga = $('f-vaga').value; F.origem = $('f-origem').value;
+    $('erro').hidden = true;
+    desenhar();
+    $('status').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (e) {
+    $('erro').hidden = false; $('erro-msg').textContent = `Motivo: ${e.message}.`;
+    $('status').textContent = 'Falha ao atualizar';
+  }
+}
+['cidade', 'vaga', 'sla', 'origem'].forEach((k) => $('f-' + k).addEventListener('change', (e) => { F[k] = e.target.value; desenhar(); }));
+$('limpar').addEventListener('click', () => { ['cidade', 'vaga', 'sla', 'origem'].forEach((k) => { F[k] = ''; $('f-' + k).value = ''; }); $('busca').value = ''; desenhar(); });
+$('busca').addEventListener('input', () => desenharCandidatos());
+$('refresh').addEventListener('click', carregar);
+carregar();
+setInterval(carregar, CONFIG.atualizarACadaMin * 60 * 1000);
+</script>
+</body>
+</html>
